@@ -2,28 +2,21 @@ package main
 
 import (
 	"log"
-	"net/http"
-	"os"
 
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/config"
-	"github.com/rs/zerolog"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/bootstrap"
 )
 
 func main() {
-  cfg := config.Load()
+	app, err := bootstrap.NewApp()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	logger := zerolog.New(os.Stdout).With().
-		Timestamp().
-		Logger()
-
-	logger.Info().
-		Str("service", "financial-pocket").
-		Str("port", cfg.Port).
+	app.Logger.Info().
+		Str("port", app.Config.Port).
 		Msg("starting server")
 
-	mux := http.NewServeMux()
-	err := http.ListenAndServe(":"+cfg.Port, mux)
-	if err != nil {
+	if err := app.Router.Run(":" + app.Config.Port); err != nil {
 		log.Fatal(err)
 	}
 }
