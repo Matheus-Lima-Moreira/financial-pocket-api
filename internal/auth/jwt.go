@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -23,7 +24,7 @@ func NewJWTManager(accessTokenSecret, refreshTokenSecret string) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateAccessToken(userID string) (string, error) {
+func (j *JWTManager) GenerateAccessToken(userID string) (string, *shared_errors.AppError) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"type":    "access",
@@ -32,10 +33,14 @@ func (j *JWTManager) GenerateAccessToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.accessTokenSecret))
+	accessToken, err := token.SignedString([]byte(j.accessTokenSecret))
+	if err != nil {
+		return "", shared_errors.NewBadRequest(err.Error())
+	}
+	return accessToken, nil
 }
 
-func (j *JWTManager) GenerateRefreshToken(userID string) (string, error) {
+func (j *JWTManager) GenerateRefreshToken(userID string) (string, *shared_errors.AppError) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"type":    "refresh",
@@ -44,50 +49,54 @@ func (j *JWTManager) GenerateRefreshToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.refreshTokenSecret))
+	refreshToken, err := token.SignedString([]byte(j.refreshTokenSecret))
+	if err != nil {
+		return "", shared_errors.NewBadRequest(err.Error())
+	}
+	return refreshToken, nil
 }
 
-func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, error) {
+func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, *shared_errors.AppError) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, ErrInvalidToken
+			return nil, shared_errors.NewUnauthorized("invalid token")
 		}
 		return []byte(j.accessTokenSecret), nil
 	})
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrExpiredToken
+			return nil, shared_errors.NewUnauthorized("expired token")
 		}
-		return nil, ErrInvalidToken
+		return nil, shared_errors.NewUnauthorized("invalid token")
 	}
 
 	if !token.Valid {
-		return nil, ErrInvalidToken
+		return nil, shared_errors.NewUnauthorized("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, ErrInvalidToken
+		return nil, shared_errors.NewUnauthorized("invalid token")
 	}
 
 	return claims, nil
 }
 
-func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, error) {
+func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, *shared_errors.AppError) {
 	claims, err := j.ValidateToken(tokenString)
 	if err != nil {
-		return "", err
+		return "", shared_errors.NewUnauthorized("invalid token")
 	}
 
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "refresh" {
-		return "", ErrInvalidToken
+		return "", shared_errors.NewUnauthorized("invalid token")
 	}
 
 	userID, ok := claims["user_id"].(string)
 	if !ok {
-		return "", ErrInvalidToken
+		return "", shared_errors.NewUnauthorized("invalid token")
 	}
 
 	return userID, nil

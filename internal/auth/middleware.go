@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
 
 func AuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
@@ -13,7 +14,7 @@ func AuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
 
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": ErrMissingToken.Error(),
+				"errors": []string{shared_errors.NewUnauthorized("missing token").Error()},
 			})
 			return
 		}
@@ -23,11 +24,11 @@ func AuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
 		claims, err := jwtManager.ValidateToken(tokenStr)
 		if err != nil {
 			statusCode := http.StatusUnauthorized
-			if err == ErrExpiredToken {
+			if err == shared_errors.NewUnauthorized("expired token") {
 				statusCode = http.StatusUnauthorized
 			}
 			c.AbortWithStatusJSON(statusCode, gin.H{
-				"error": err.Error(),
+				"errors": []string{err.Error()},
 			})
 			return
 		}
@@ -35,7 +36,7 @@ func AuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
 		tokenType, ok := claims["type"].(string)
 		if !ok || tokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": ErrInvalidToken.Error(),
+				"errors": []string{shared_errors.NewUnauthorized("invalid token").Error()},
 			})
 			return
 		}

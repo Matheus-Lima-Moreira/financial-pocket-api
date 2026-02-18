@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
+
+	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
 
 type Service struct {
@@ -24,10 +26,10 @@ func NewService(repo Repository, jwt *JWTManager) *Service {
 	}
 }
 
-func (s *Service) Register(ctx context.Context, email, password string) error {
+func (s *Service) Register(ctx context.Context, email, password string) *shared_errors.AppError {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return shared_errors.NewBadRequest(err.Error())
 	}
 
 	user := &User{
@@ -35,32 +37,36 @@ func (s *Service) Register(ctx context.Context, email, password string) error {
 		Password: string(hash),
 	}
 
-	return s.repo.Create(ctx, user)
+	if err := s.repo.Create(ctx, user); err != nil {
+		return shared_errors.NewBadRequest(err.Error())
+	}
+
+	return nil
 }
 
-func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair, error) {
+func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair, *shared_errors.AppError) {
 	user, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, shared_errors.NewUnauthorized("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.Password),
 		[]byte(password),
 	); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, shared_errors.NewUnauthorized("invalid credentials")
 	}
 
 	userID := strconv.Itoa(int(user.ID))
 
 	accessToken, err := s.jwt.GenerateAccessToken(userID)
 	if err != nil {
-		return nil, err
+		return nil, shared_errors.NewBadRequest(err.Error())
 	}
 
 	refreshToken, err := s.jwt.GenerateRefreshToken(userID)
 	if err != nil {
-		return nil, err
+		return nil, shared_errors.NewBadRequest(err.Error())
 	}
 
 	return &TokenPair{
@@ -69,20 +75,20 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 	}, nil
 }
 
-func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, error) {
+func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, *shared_errors.AppError) {
 	userID, err := s.jwt.ValidateRefreshToken(refreshToken)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, shared_errors.NewUnauthorized("invalid token")
 	}
 
 	accessToken, err := s.jwt.GenerateAccessToken(userID)
 	if err != nil {
-		return nil, err
+		return nil, shared_errors.NewBadRequest(err.Error())
 	}
 
 	newRefreshToken, err := s.jwt.GenerateRefreshToken(userID)
 	if err != nil {
-		return nil, err
+		return nil, shared_errors.NewBadRequest(err.Error())
 	}
 
 	return &TokenPair{

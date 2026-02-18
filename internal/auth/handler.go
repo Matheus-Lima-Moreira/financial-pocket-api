@@ -19,6 +19,10 @@ type registerInput struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
+type refreshInput struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
 func (h *Handler) Register(c *gin.Context) {
 	var input registerInput
 
@@ -50,10 +54,6 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, tokens)
-}
-
-type refreshInput struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 func (h *Handler) Refresh(c *gin.Context) {
