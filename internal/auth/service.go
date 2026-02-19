@@ -38,7 +38,7 @@ func (s *Service) Register(ctx context.Context, email, password string) *shared_
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
-		return shared_errors.NewBadRequest(err.Error())
+		return err
 	}
 
 	return nil
@@ -47,7 +47,7 @@ func (s *Service) Register(ctx context.Context, email, password string) *shared_
 func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair, *shared_errors.AppError) {
 	user, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, shared_errors.NewUnauthorized("invalid credentials")
+		return nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
@@ -61,12 +61,12 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 
 	accessToken, err := s.jwt.GenerateAccessToken(userID)
 	if err != nil {
-		return nil, shared_errors.NewBadRequest(err.Error())
+		return nil, err
 	}
 
 	refreshToken, err := s.jwt.GenerateRefreshToken(userID)
 	if err != nil {
-		return nil, shared_errors.NewBadRequest(err.Error())
+		return nil, err
 	}
 
 	return &TokenPair{
@@ -78,17 +78,17 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*TokenPair, *shared_errors.AppError) {
 	userID, err := s.jwt.ValidateRefreshToken(refreshToken)
 	if err != nil {
-		return nil, shared_errors.NewUnauthorized("invalid token")
+		return nil, err
 	}
 
 	accessToken, err := s.jwt.GenerateAccessToken(userID)
 	if err != nil {
-		return nil, shared_errors.NewBadRequest(err.Error())
+		return nil, err
 	}
 
 	newRefreshToken, err := s.jwt.GenerateRefreshToken(userID)
 	if err != nil {
-		return nil, shared_errors.NewBadRequest(err.Error())
+		return nil, err
 	}
 
 	return &TokenPair{

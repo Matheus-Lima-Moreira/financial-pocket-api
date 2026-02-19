@@ -19,8 +19,8 @@ func NewJWTManager(accessTokenSecret, refreshTokenSecret string) *JWTManager {
 	return &JWTManager{
 		accessTokenSecret:    accessTokenSecret,
 		refreshTokenSecret:   refreshTokenSecret,
-		accessTokenDuration:  time.Hour,          // Access token: 1 hora
-		refreshTokenDuration: time.Hour * 24 * 7, // Refresh token: 7 dias
+		accessTokenDuration:  time.Hour,
+		refreshTokenDuration: time.Hour * 24 * 7,
 	}
 }
 
@@ -57,11 +57,34 @@ func (j *JWTManager) GenerateRefreshToken(userID string) (string, *shared_errors
 }
 
 func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, *shared_errors.AppError) {
+	return j.parseToken(tokenString, j.accessTokenSecret)
+}
+
+func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, *shared_errors.AppError) {
+	claims, err := j.parseToken(tokenString, j.refreshTokenSecret)
+	if err != nil {
+		return "", err
+	}
+
+	tokenType, ok := claims["type"].(string)
+	if !ok || tokenType != "refresh" {
+		return "", shared_errors.NewUnauthorized("invalid token")
+	}
+
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return "", shared_errors.NewUnauthorized("invalid token")
+	}
+
+	return userID, nil
+}
+
+func (j *JWTManager) parseToken(tokenString string, secret string) (jwt.MapClaims, *shared_errors.AppError) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, shared_errors.NewUnauthorized("invalid token")
 		}
-		return []byte(j.accessTokenSecret), nil
+		return []byte(secret), nil
 	})
 
 	if err != nil {
@@ -81,23 +104,4 @@ func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, *shared_e
 	}
 
 	return claims, nil
-}
-
-func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, *shared_errors.AppError) {
-	claims, err := j.ValidateToken(tokenString)
-	if err != nil {
-		return "", shared_errors.NewUnauthorized("invalid token")
-	}
-
-	tokenType, ok := claims["type"].(string)
-	if !ok || tokenType != "refresh" {
-		return "", shared_errors.NewUnauthorized("invalid token")
-	}
-
-	userID, ok := claims["user_id"].(string)
-	if !ok {
-		return "", shared_errors.NewUnauthorized("invalid token")
-	}
-
-	return userID, nil
 }

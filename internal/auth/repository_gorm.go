@@ -5,9 +5,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 	"gorm.io/gorm"
 )
+
+const mysqlErrDuplicateEntry = 1062
 
 type GormRepository struct {
 	db *gorm.DB
@@ -24,12 +27,26 @@ type userModel struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == mysqlErrDuplicateEntry
+	}
+	return false
+}
+
 func (r *GormRepository) Create(ctx context.Context, user *User) *shared_errors.AppError {
 	model := toModel(user)
 
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return shared_errors.NewConflict("user already exists")
+		if isDuplicateKeyError(err) {
+			return shared_errors.NewConflict("email já está em uso", "email")
 		}
 		return shared_errors.NewBadRequest(err.Error())
 	}

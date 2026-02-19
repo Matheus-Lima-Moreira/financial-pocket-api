@@ -26,9 +26,9 @@ const (
 )
 
 type AppError struct {
-	Code    int
-	Message string
-	Err     error
+	Code      int
+	Message   string
+	Err       error
 	ErrorCode string
 	Field     string
 }
@@ -62,11 +62,16 @@ func NewNotFound(resource string) *AppError {
 	}
 }
 
-func NewConflict(message string) *AppError {
+func NewConflict(message string, field ...string) *AppError {
+	f := ""
+	if len(field) > 0 {
+		f = field[0]
+	}
 	return &AppError{
 		Code:      http.StatusConflict,
 		Message:   message,
 		ErrorCode: CodeConflict,
+		Field:     f,
 	}
 }
 
