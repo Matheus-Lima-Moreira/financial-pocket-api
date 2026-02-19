@@ -13,30 +13,29 @@ func AuthMiddleware(jwtManager *JWTManager) gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
+			errorDetail := shared_errors.NewUnauthorized("missing token").ToErrorDetail()
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"errors": []string{shared_errors.NewUnauthorized("missing token").Error()},
+				"errors": []shared_errors.ErrorDetail{errorDetail},
 			})
 			return
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
-		claims, err := jwtManager.ValidateToken(tokenStr)
-		if err != nil {
-			statusCode := http.StatusUnauthorized
-			if err == shared_errors.NewUnauthorized("expired token") {
-				statusCode = http.StatusUnauthorized
-			}
-			c.AbortWithStatusJSON(statusCode, gin.H{
-				"errors": []string{err.Error()},
+		claims, appErr := jwtManager.ValidateToken(tokenStr)
+		if appErr != nil {
+			errorDetail := appErr.ToErrorDetail()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"errors": []shared_errors.ErrorDetail{errorDetail},
 			})
 			return
 		}
 
 		tokenType, ok := claims["type"].(string)
 		if !ok || tokenType != "access" {
+			errorDetail := shared_errors.NewUnauthorized("invalid token").ToErrorDetail()
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"errors": []string{shared_errors.NewUnauthorized("invalid token").Error()},
+				"errors": []shared_errors.ErrorDetail{errorDetail},
 			})
 			return
 		}

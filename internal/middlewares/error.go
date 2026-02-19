@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -11,6 +10,21 @@ import (
 	"github.com/go-playground/validator/v10"
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
+
+func mapValidationTagToCode(tag string) string {
+	switch tag {
+	case "required":
+		return shared_errors.CodeRequired
+	case "email":
+		return shared_errors.CodeInvalidEmail
+	case "min":
+		return shared_errors.CodeMinLength
+	case "max":
+		return shared_errors.CodeMaxLength
+	default:
+		return shared_errors.CodeInvalidFormat
+	}
+}
 
 func ErrorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -21,69 +35,76 @@ func ErrorMiddleware() gin.HandlerFunc {
 		}
 
 		err := c.Errors.Last().Err
+		var errorDetails []shared_errors.ErrorDetail
 
-		// Trata erro quando não há body (EOF)
 		if errors.Is(err, io.EOF) {
+			errorDetails = []shared_errors.ErrorDetail{
+				{
+					Code:  shared_errors.CodeMissingBody,
+					Field: "",
+				},
+			}
 			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": []string{"corpo da requisição é obrigatório"},
+				"errors": errorDetails,
 			})
 			return
 		}
 
-		// Trata erros de binding do Gin (JSON inválido, etc)
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "json") ||
 			strings.Contains(errMsg, "bind") ||
 			strings.Contains(errMsg, "unmarshal") ||
 			strings.Contains(errMsg, "invalid character") {
+			errorDetails = []shared_errors.ErrorDetail{
+				{
+					Code:  shared_errors.CodeInvalidJSON,
+					Field: "",
+				},
+			}
 			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": []string{"formato JSON inválido"},
+				"errors": errorDetails,
 			})
 			return
 		}
 
-		// Trata erros de validação do validator
 		if validationErrs, ok := err.(validator.ValidationErrors); ok {
-			var messages []string
+			errorDetails = make([]shared_errors.ErrorDetail, 0, len(validationErrs))
 			for _, fieldErr := range validationErrs {
 				field := strings.ToLower(fieldErr.Field())
 				tag := fieldErr.Tag()
+				code := mapValidationTagToCode(tag)
 
-				var message string
-				switch tag {
-				case "required":
-					message = field + " é obrigatório"
-				case "email":
-					message = field + " deve ser um email válido"
-				case "min":
-					message = fmt.Sprintf("%s deve ter no mínimo %s caracteres", field, fieldErr.Param())
-				case "max":
-					message = fmt.Sprintf("%s deve ter no máximo %s caracteres", field, fieldErr.Param())
-				default:
-					message = fmt.Sprintf("%s é inválido", field)
-				}
-				messages = append(messages, message)
+				errorDetails = append(errorDetails, shared_errors.ErrorDetail{
+					Code:  code,
+					Field: field,
+				})
 			}
 
 			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": messages,
+				"errors": errorDetails,
 			})
 			return
 		}
 
-		// Trata AppError customizado
 		if appErr, ok := err.(*shared_errors.AppError); ok {
+			errorDetail := appErr.ToErrorDetail()
+			errorDetails = []shared_errors.ErrorDetail{errorDetail}
+
 			c.JSON(appErr.Code, gin.H{
-				"errors": []string{appErr.Message},
+				"errors": errorDetails,
 			})
 			return
 		}
 
-		// Log do erro não tratado para debug
-		fmt.Println("Erro não tratado:", err)
+		errorDetails = []shared_errors.ErrorDetail{
+			{
+				Code:  shared_errors.CodeInternalError,
+				Field: "",
+			},
+		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"errors": []string{"internal server error"},
+			"errors": errorDetails,
 		})
 	}
 }
