@@ -34,6 +34,7 @@ func NewRouter(dep Dependencies) *gin.Engine {
 	}
 
 	router.Use(gin.Recovery())
+	router.Use(middlewares.I18nMiddleware())
 	router.Use(middlewares.LoggerMiddleware(dep.Logger))
 	router.Use(middlewares.ErrorMiddleware())
 
