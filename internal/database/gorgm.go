@@ -6,7 +6,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
 )
 
 func NewMySQL(dsn string) (*gorm.DB, error) {

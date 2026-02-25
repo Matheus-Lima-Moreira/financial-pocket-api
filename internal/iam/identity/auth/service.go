@@ -6,13 +6,13 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
 )
 
 type Service struct {
 	userRepository user.Repository
-	jwt  *JWTManager
+	jwt            *JWTManager
 }
 
 type TokenPair struct {
@@ -23,19 +23,32 @@ type TokenPair struct {
 func NewService(userRepository user.Repository, jwt *JWTManager) *Service {
 	return &Service{
 		userRepository: userRepository,
-		jwt:  jwt,
+		jwt:            jwt,
 	}
 }
 
-func (s *Service) Register(ctx context.Context, email, password string) *shared_errors.AppError {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+type RegisterInput struct {
+	Name     string `json:"name" binding:"required,min=3"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+func (s *Service) Register(ctx context.Context, input RegisterInput) *shared_errors.AppError {
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return shared_errors.NewBadRequest(err.Error())
 	}
 
 	user := &user.UserEntity{
-		Email:    email,
+		Name:     input.Name,
+		Email:    input.Email,
 		Password: string(hash),
+		
+	}
+
+	existingUser, _ := s.userRepository.FindByEmail(ctx, input.Email)
+	if existingUser != nil {
+		return shared_errors.NewConflict("email already in use", "email")
 	}
 
 	if err := s.userRepository.Create(ctx, user); err != nil {

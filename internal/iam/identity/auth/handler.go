@@ -16,6 +16,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 type registerInput struct {
+	Name     string `json:"name" binding:"required,min=3"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 }
@@ -32,7 +33,12 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Register(c.Request.Context(), input.Email, input.Password); err != nil {
+	if err := h.service.Register(c.Request.Context(), RegisterInput{
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: input.Password,
+	},
+	); err != nil {
 		c.Error(err)
 		return
 	}

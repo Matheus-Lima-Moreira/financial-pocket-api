@@ -15,36 +15,12 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-type registerInput struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-}
-
 type listInput struct {
 	Page int `form:"page" binding:"required,min=1"`
 }
 
 type detailsInput struct {
 	ID uint `uri:"id" binding:"required,min=1"`
-}
-
-func (h *Handler) Register(c *gin.Context) {
-	var input registerInput
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.Error(err)
-		return
-	}
-
-	if err := h.service.Register(c.Request.Context(), input.Email, input.Password); err != nil {
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusCreated, dtos.ReplyDTO{
-		Message: "user.created",
-		Data:    nil,
-	})
 }
 
 func (h *Handler) List(c *gin.Context) {

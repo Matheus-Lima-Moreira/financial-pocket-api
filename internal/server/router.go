@@ -5,8 +5,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/config"
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/auth"
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/auth"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/middlewares"
 )
 
