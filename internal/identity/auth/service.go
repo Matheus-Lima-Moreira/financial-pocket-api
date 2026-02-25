@@ -7,10 +7,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
 )
 
 type Service struct {
-	repo Repository
+	userRepository user.Repository
 	jwt  *JWTManager
 }
 
@@ -19,9 +20,9 @@ type TokenPair struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func NewService(repo Repository, jwt *JWTManager) *Service {
+func NewService(userRepository user.Repository, jwt *JWTManager) *Service {
 	return &Service{
-		repo: repo,
+		userRepository: userRepository,
 		jwt:  jwt,
 	}
 }
@@ -32,12 +33,12 @@ func (s *Service) Register(ctx context.Context, email, password string) *shared_
 		return shared_errors.NewBadRequest(err.Error())
 	}
 
-	user := &User{
+	user := &user.UserEntity{
 		Email:    email,
 		Password: string(hash),
 	}
 
-	if err := s.repo.Create(ctx, user); err != nil {
+	if err := s.userRepository.Create(ctx, user); err != nil {
 		return err
 	}
 
@@ -45,7 +46,7 @@ func (s *Service) Register(ctx context.Context, email, password string) *shared_
 }
 
 func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair, *shared_errors.AppError) {
-	user, err := s.repo.FindByEmail(ctx, email)
+	user, err := s.userRepository.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}

@@ -7,9 +7,10 @@ import (
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/auth"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/config"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/database"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/auth"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/server"
 )
 
@@ -36,21 +37,21 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	// Auth
-	if err := auth.Migrate(db); err != nil {
-		return nil, err
-	}
-	authRepository := auth.NewGormRepository(db)
+	userRepository := user.NewGormRepository(db)
+	userService := user.NewService(userRepository)
+	userHandler := user.NewHandler(userService)
+
 	jwtManager := auth.NewJWTManager(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
-	authService := auth.NewService(authRepository, jwtManager)
+	authService := auth.NewService(userRepository, jwtManager)
 	authHandler := auth.NewHandler(authService)
 
 	// Router
 	router := server.NewRouter(server.Dependencies{
 		Logger:      logger,
-		AuthHandler: authHandler,
-		JWTManager:  jwtManager,
 		Config:      cfg,
+		JWTManager:  jwtManager,
+		AuthHandler: authHandler,
+		UserHandler: userHandler,
 	})
 
 	return &App{

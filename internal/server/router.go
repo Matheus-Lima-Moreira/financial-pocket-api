@@ -4,16 +4,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
-	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/auth"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/config"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/auth"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/identity/user"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/middlewares"
 )
 
 type Dependencies struct {
 	Logger      zerolog.Logger
-	AuthHandler *auth.Handler
-	JWTManager  *auth.JWTManager
 	Config      *config.Config
+	JWTManager  *auth.JWTManager
+	AuthHandler *auth.Handler
+	UserHandler *user.Handler
 }
 
 func NewRouter(dep Dependencies) *gin.Engine {
@@ -35,14 +37,19 @@ func NewRouter(dep Dependencies) *gin.Engine {
 	router.Use(middlewares.LoggerMiddleware(dep.Logger))
 	router.Use(middlewares.ErrorMiddleware())
 
-	router.GET("/health", func(c *gin.Context) {
+	public := router.Group("")
+	private := router.Group("")
+
+	// Middlewares
+	private.Use(auth.AuthMiddleware(dep.JWTManager))
+
+	// Routes
+	auth.RegisterRoutes(public, private, dep.AuthHandler)
+	user.RegisterRoutes(public, private, dep.UserHandler)
+
+	public.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "OK"})
 	})
-
-	auth.RegisterRoutes(router, dep.AuthHandler)
-
-	protected := router.Group("/api")
-	protected.Use(auth.AuthMiddleware(dep.JWTManager))
 
 	return router
 }

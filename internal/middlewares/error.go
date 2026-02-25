@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/dtos"
+	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
 
 func mapValidationTagToCode(tag string) string {
@@ -44,8 +45,9 @@ func ErrorMiddleware() gin.HandlerFunc {
 					Field: "",
 				},
 			}
-			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": errorDetails,
+			c.JSON(http.StatusBadRequest, dtos.ReplyDTO{
+				Errors:  errorDetails,
+				Message: "missing body",
 			})
 			return
 		}
@@ -61,8 +63,9 @@ func ErrorMiddleware() gin.HandlerFunc {
 					Field: "",
 				},
 			}
-			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": errorDetails,
+			c.JSON(http.StatusBadRequest, dtos.ReplyDTO{
+				Errors:  errorDetails,
+				Message: "invalid JSON",
 			})
 			return
 		}
@@ -80,8 +83,9 @@ func ErrorMiddleware() gin.HandlerFunc {
 				})
 			}
 
-			c.JSON(http.StatusBadRequest, gin.H{
-				"errors": errorDetails,
+			c.JSON(http.StatusBadRequest, dtos.ReplyDTO{
+				Errors:  errorDetails,
+				Message: "validation error",
 			})
 			return
 		}
@@ -90,8 +94,9 @@ func ErrorMiddleware() gin.HandlerFunc {
 			errorDetail := appErr.ToErrorDetail()
 			errorDetails = []shared_errors.ErrorDetail{errorDetail}
 
-			c.JSON(appErr.Code, gin.H{
-				"errors": errorDetails,
+			c.JSON(appErr.Code, dtos.ReplyDTO{
+				Errors:  errorDetails,
+				Message: appErr.Message,
 			})
 			return
 		}
@@ -103,8 +108,9 @@ func ErrorMiddleware() gin.HandlerFunc {
 			},
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"errors": errorDetails,
+		c.JSON(http.StatusInternalServerError, dtos.ReplyDTO{
+			Errors:  errorDetails,
+			Message: "internal server error",
 		})
 	}
 }
