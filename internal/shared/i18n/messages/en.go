@@ -12,6 +12,8 @@ var en = []*goi18n.Message{
 	{ID: "auth.verify_email_success", Other: "Email verified successfully"},
 	{ID: "auth.verify_email_send_failed", Other: "Failed to send verification email"},
 	{ID: "auth.email_not_verified", Other: "Email not verified"},
+	{ID: "token.resend_verification_email_success", Other: "Verification email sent successfully"},
+	{ID: "token.reset_password_success", Other: "Password reset successfully"},
 	{ID: "error.missing_body", Other: "Missing request body"},
 	{ID: "error.invalid_json", Other: "Invalid JSON"},
 	{ID: "error.validation", Other: "Validation error"},

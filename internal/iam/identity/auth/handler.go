@@ -25,10 +25,6 @@ type refreshInput struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
-type verifyEmailInput struct {
-	Token string `form:"token" binding:"required"`
-}
-
 func (h *Handler) Register(c *gin.Context) {
 	var input registerInput
 
@@ -90,24 +86,5 @@ func (h *Handler) Refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, dtos.ReplyDTO{
 		Data:    tokens,
 		Message: "auth.refresh_success",
-	})
-}
-
-func (h *Handler) VerifyEmail(c *gin.Context) {
-	var input verifyEmailInput
-
-	if err := c.ShouldBindQuery(&input); err != nil {
-		c.Error(err)
-		return
-	}
-
-	if err := h.service.VerifyEmail(c.Request.Context(), input.Token); err != nil {
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, dtos.ReplyDTO{
-		Message: "auth.verify_email_success",
-		Data:    nil,
 	})
 }

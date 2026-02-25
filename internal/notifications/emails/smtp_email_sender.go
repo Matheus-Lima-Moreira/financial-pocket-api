@@ -13,10 +13,13 @@ import (
 //go:embed templates/layout/base-template.html
 var baseTemplateHTML string
 
-//go:embed templates/mails/verify-email.html
+//go:embed templates/mails/verify-email.template.html
 var verifyEmailHTML string
 
-//go:embed logo.png
+//go:embed templates/mails/reset-password.template.html
+var resetPasswordHTML string
+
+//go:embed images/logo.png
 var logoPNG []byte
 
 const (
@@ -32,7 +35,7 @@ type SMTPEmailSender struct {
 	from string
 }
 
-func NewSMTPEmailSender(host, port, user, pass, from string) *SMTPEmailSender {
+func NewSMTPEmailSender(host, port, user, pass, from string) EmailSender {
 	return &SMTPEmailSender{
 		host: host,
 		port: port,
@@ -60,6 +63,24 @@ func (s *SMTPEmailSender) SendVerifyEmail(_ context.Context, to, name, verifyURL
 	return smtp.SendMail(address, auth, s.from, []string{to}, message)
 }
 
+func (s *SMTPEmailSender) SendResetPasswordEmail(_ context.Context, to, name, resetPasswordURL string) error {
+	auth := smtp.PlainAuth("", s.user, s.pass, s.host)
+	address := fmt.Sprintf("%s:%s", s.host, s.port)
+
+	subject := "Subject: Reset your password\r\n"
+	headers := "MIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n"
+
+	receiverName := strings.TrimSpace(name)
+	if receiverName == "" {
+		receiverName = "there"
+	}
+
+	body := buildResetPasswordHTML(receiverName, resetPasswordURL)
+	message := []byte(subject + headers + body)
+
+	return smtp.SendMail(address, auth, s.from, []string{to}, message)
+}
+
 func buildVerifyEmailHTML(name, verifyURL string) string {
 	content := verifyEmailHTML
 	content = replacePlaceholders(content, map[string]string{
@@ -78,6 +99,29 @@ func buildVerifyEmailHTML(name, verifyURL string) string {
 		"{{PRIMARY_COLOR}}":   emailPrimaryColor,
 		"{{COMPANY_NAME}}":    companyName,
 		"{{GLOBAL_SITE_URL}}": resolveGlobalSiteURL(verifyURL),
+	})
+
+	return html
+}
+
+func buildResetPasswordHTML(name, resetPasswordURL string) string {
+	content := resetPasswordHTML
+	content = replacePlaceholders(content, map[string]string{
+		"{{NAME}}":          name,
+		"{{URL}}":           resetPasswordURL,
+		"{{PRIMARY_COLOR}}": emailPrimaryColor,
+		"{{COMPANY_NAME}}":  companyName,
+	})
+
+	logoTag := `<img src="data:image/png;base64,` + base64.StdEncoding.EncodeToString(logoPNG) + `" alt="` + companyName + `" style="width: 250px; height: auto;" />`
+
+	html := baseTemplateHTML
+	html = replacePlaceholders(html, map[string]string{
+		"{{CONTENT}}":         content,
+		"{{LOGO}}":            logoTag,
+		"{{PRIMARY_COLOR}}":   emailPrimaryColor,
+		"{{COMPANY_NAME}}":    companyName,
+		"{{GLOBAL_SITE_URL}}": resolveGlobalSiteURL(resetPasswordURL),
 	})
 
 	return html

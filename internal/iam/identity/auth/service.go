@@ -2,20 +2,19 @@ package auth
 
 import (
 	"context"
-	"net/url"
 	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/provisioning/token"
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
 
 type Service struct {
 	userRepository user.Repository
 	jwt            *JWTManager
-	emailSender    EmailSender
-	verifyBaseURL  string
+	tokenService   *token.Service
 }
 
 type TokenPair struct {
@@ -23,12 +22,11 @@ type TokenPair struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func NewService(userRepository user.Repository, jwt *JWTManager, emailSender EmailSender, verifyBaseURL string) *Service {
+func NewService(userRepository user.Repository, jwt *JWTManager, tokenService *token.Service) *Service {
 	return &Service{
 		userRepository: userRepository,
 		jwt:            jwt,
-		emailSender:    emailSender,
-		verifyBaseURL:  verifyBaseURL,
+		tokenService:   tokenService,
 	}
 }
 
@@ -63,7 +61,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) *shared_err
 		return err
 	}
 
-	if err := s.sendVerificationEmail(ctx, user); err != nil {
+	if err := s.tokenService.SendVerificationEmail(ctx, user.Email); err != nil {
 		return err
 	}
 
@@ -125,37 +123,4 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*Token
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 	}, nil
-}
-
-func (s *Service) VerifyEmail(ctx context.Context, verifyToken string) *shared_errors.AppError {
-	userID, err := s.jwt.ValidateVerifyEmailToken(verifyToken)
-	if err != nil {
-		return err
-	}
-
-	parsedID, parseErr := strconv.Atoi(userID)
-	if parseErr != nil {
-		return shared_errors.NewUnauthorized("invalid token")
-	}
-
-	if repositoryErr := s.userRepository.SetEmailVerified(ctx, uint(parsedID), true); repositoryErr != nil {
-		return repositoryErr
-	}
-
-	return nil
-}
-
-func (s *Service) sendVerificationEmail(ctx context.Context, createdUser *user.UserEntity) *shared_errors.AppError {
-	userID := strconv.Itoa(int(createdUser.ID))
-	verifyToken, tokenErr := s.jwt.GenerateVerifyEmailToken(userID)
-	if tokenErr != nil {
-		return tokenErr
-	}
-
-	verifyURL := s.verifyBaseURL + "?token=" + url.QueryEscape(verifyToken)
-	if err := s.emailSender.SendVerifyEmail(ctx, createdUser.Email, createdUser.Name, verifyURL); err != nil {
-		return shared_errors.NewBadRequest("auth.verify_email_send_failed")
-	}
-
-	return nil
 }

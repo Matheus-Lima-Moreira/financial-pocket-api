@@ -12,6 +12,8 @@ var ptBR = []*goi18n.Message{
 	{ID: "auth.verify_email_success", Other: "Email verificado com sucesso"},
 	{ID: "auth.verify_email_send_failed", Other: "Falha ao enviar email de verificacao"},
 	{ID: "auth.email_not_verified", Other: "Email ainda nao verificado"},
+	{ID: "token.resend_verification_email_success", Other: "Email de verificacao enviado com sucesso"},
+	{ID: "token.reset_password_success", Other: "Senha resetada com sucesso"},
 	{ID: "error.missing_body", Other: "Corpo da requisição ausente"},
 	{ID: "error.invalid_json", Other: "JSON inválido"},
 	{ID: "error.validation", Other: "Erro de validação"},
