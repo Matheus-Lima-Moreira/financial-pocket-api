@@ -9,15 +9,21 @@ import (
 )
 
 type Config struct {
-	Env        string
-	Port       string
-	DBUser     string
-	DBPassword string
-	DBHost     string
-	DBPort     string
-	DBName     string
+	Env                string
+	Port               string
+	DBUser             string
+	DBPassword         string
+	DBHost             string
+	DBPort             string
+	DBName             string
 	AccessTokenSecret  string
 	RefreshTokenSecret string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPassword       string
+	SMTPFrom           string
+	VerifyEmailBaseURL string
 }
 
 func Load() *Config {
@@ -64,22 +70,51 @@ func Load() *Config {
 	if accessTokenSecret == "" {
 		accessTokenSecret = "secret"
 	}
-	
+
 	refreshTokenSecret := os.Getenv("REFRESH_TOKEN_SECRET")
 	if refreshTokenSecret == "" {
 		refreshTokenSecret = "secret"
 	}
 
+	smtpHost := os.Getenv("SMTP_HOST")
+	if smtpHost == "" {
+		smtpHost = "localhost"
+	}
+
+	smtpPort := os.Getenv("SMTP_PORT")
+	if smtpPort == "" {
+		smtpPort = "1025"
+	}
+
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPassword := os.Getenv("SMTP_PASSWORD")
+
+	smtpFrom := os.Getenv("SMTP_FROM")
+	if smtpFrom == "" {
+		smtpFrom = "noreply@financial-pocket.dev"
+	}
+
+	verifyEmailBaseURL := os.Getenv("VERIFY_EMAIL_BASE_URL")
+	if verifyEmailBaseURL == "" {
+		verifyEmailBaseURL = "http://localhost:8090/auth/verify-email"
+	}
+
 	return &Config{
-		Env:        env,
-		Port:       port,
-		DBUser:     dbUser,
-		DBPassword: dbPassword,
-		DBHost:     dbHost,
-		DBPort:     dbPort,
-		DBName:     dbName,
+		Env:                env,
+		Port:               port,
+		DBUser:             dbUser,
+		DBPassword:         dbPassword,
+		DBHost:             dbHost,
+		DBPort:             dbPort,
+		DBName:             dbName,
 		AccessTokenSecret:  accessTokenSecret,
 		RefreshTokenSecret: refreshTokenSecret,
+		SMTPHost:           smtpHost,
+		SMTPPort:           smtpPort,
+		SMTPUser:           smtpUser,
+		SMTPPassword:       smtpPassword,
+		SMTPFrom:           smtpFrom,
+		VerifyEmailBaseURL: verifyEmailBaseURL,
 	}
 }
 

@@ -67,6 +67,23 @@ func (r *GormRepository) FindByEmail(ctx context.Context, email string) (*UserEn
 	return toDomain(&model), nil
 }
 
+func (r *GormRepository) SetEmailVerified(ctx context.Context, id uint, value bool) *shared_errors.AppError {
+	result := r.db.WithContext(ctx).
+		Model(&UserSchema{}).
+		Where("id = ?", id).
+		Update("email_verified", value)
+
+	if result.Error != nil {
+		return shared_errors.NewBadRequest(result.Error.Error())
+	}
+
+	if result.RowsAffected == 0 {
+		return shared_errors.NewNotFound("user")
+	}
+
+	return nil
+}
+
 func (r *GormRepository) List(ctx context.Context, page int) ([]UserEntity, *dtos.PaginationDTO, *shared_errors.AppError) {
 	var models []UserSchema
 

@@ -13,6 +13,7 @@ type JWTManager struct {
 	refreshTokenSecret   string
 	accessTokenDuration  time.Duration
 	refreshTokenDuration time.Duration
+	verifyEmailDuration  time.Duration
 }
 
 func NewJWTManager(accessTokenSecret, refreshTokenSecret string) *JWTManager {
@@ -21,6 +22,7 @@ func NewJWTManager(accessTokenSecret, refreshTokenSecret string) *JWTManager {
 		refreshTokenSecret:   refreshTokenSecret,
 		accessTokenDuration:  time.Hour,
 		refreshTokenDuration: time.Hour * 24 * 7,
+		verifyEmailDuration:  time.Hour * 24,
 	}
 }
 
@@ -56,6 +58,22 @@ func (j *JWTManager) GenerateRefreshToken(userID string) (string, *shared_errors
 	return refreshToken, nil
 }
 
+func (j *JWTManager) GenerateVerifyEmailToken(userID string) (string, *shared_errors.AppError) {
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"type":    "verify_email",
+		"exp":     time.Now().Add(j.verifyEmailDuration).Unix(),
+		"iat":     time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	verifyEmailToken, err := token.SignedString([]byte(j.accessTokenSecret))
+	if err != nil {
+		return "", shared_errors.NewBadRequest(err.Error())
+	}
+	return verifyEmailToken, nil
+}
+
 func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, *shared_errors.AppError) {
 	return j.parseToken(tokenString, j.accessTokenSecret)
 }
@@ -68,6 +86,25 @@ func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, *shared_e
 
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "refresh" {
+		return "", shared_errors.NewUnauthorized("invalid token")
+	}
+
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return "", shared_errors.NewUnauthorized("invalid token")
+	}
+
+	return userID, nil
+}
+
+func (j *JWTManager) ValidateVerifyEmailToken(tokenString string) (string, *shared_errors.AppError) {
+	claims, err := j.parseToken(tokenString, j.accessTokenSecret)
+	if err != nil {
+		return "", err
+	}
+
+	tokenType, ok := claims["type"].(string)
+	if !ok || tokenType != "verify_email" {
 		return "", shared_errors.NewUnauthorized("invalid token")
 	}
 

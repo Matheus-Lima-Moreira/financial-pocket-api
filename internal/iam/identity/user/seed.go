@@ -16,8 +16,9 @@ func Seed(db *gorm.DB) error {
 	return db.
 		Where("email = ?", "admin@financial-pocket.dev").
 		FirstOrCreate(&UserSchema{
-			Name:     "Admin",
-			Email:    "admin@financial-pocket.dev",
-			Password: string(hash),
+			Name:          "Admin",
+			Email:         "admin@financial-pocket.dev",
+			Password:      string(hash),
+			EmailVerified: true,
 		}).Error
 }

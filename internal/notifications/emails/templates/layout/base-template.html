@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email - {{COMPANY_NAME}}</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @media only screen and (max-width: 620px) {
+        .container {
+          width: 100% !important;
+          padding: 0 10px !important;
+        }
+
+        .inner-content {
+          padding: 20px !important;
+        }
+
+        h1 {
+          font-size: 20px !important;
+        }
+
+        p {
+          font-size: 14px !important;
+        }
+      }
+    </style>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: 'Poppins', sans-serif;
+    "
+  >
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background: #ffffff"
+    >
+      <tr>
+        <td align="center">
+          <table
+            class="container"
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              max-width: 600px;
+              width: 100%;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+              overflow: hidden;
+            "
+          >
+            <!-- Cabeçalho -->
+            <tr style="background: #f3f4f6">
+              <td align="center" style="padding: 20px">{{LOGO}}</td>
+            </tr>
+
+            <!-- Conteúdo principal -->
+            <tr style="background: #f3f4f6">
+              <td
+                align="center"
+                class="inner-content"
+                style="
+                  padding-left: 36px;
+                  padding-right: 36px;
+                  padding-bottom: 36px;
+                "
+              >
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="
+                    background: #ffffff;
+                    border-radius: 16px;
+                    border: 1px solid #ccc;
+                  "
+                >
+                  <tr>
+                    <td style="padding: 20px; text-align: left">{{CONTENT}}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Rodapé -->
+            <tr style="background: #ffffff">
+              <td
+                style="
+                  padding: 20px;
+                  text-align: center;
+                  font-size: 13px;
+                  color: #777777;
+                  font-family: 'Poppins', sans-serif;
+                "
+              >
+                <p style="margin: 0">
+                  {{COMPANY_NAME}} © 2025 • Todos os direitos reservados
+                </p>
+                <p style="margin: 4px 0 0">
+                  <a
+                    href="{{GLOBAL_SITE_URL}}"
+                    style="color: {{PRIMARY_COLOR}}; text-decoration: none"
+                    >{{GLOBAL_SITE_URL}}</a
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

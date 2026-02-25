@@ -11,6 +11,7 @@ import (
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/database"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/auth"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/notifications/emails"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/server"
 )
 
@@ -42,7 +43,14 @@ func NewApp() (*App, error) {
 	userHandler := user.NewHandler(userService)
 
 	jwtManager := auth.NewJWTManager(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
-	authService := auth.NewService(userRepository, jwtManager)
+	emailSender := emails.NewSMTPEmailSender(
+		cfg.SMTPHost,
+		cfg.SMTPPort,
+		cfg.SMTPUser,
+		cfg.SMTPPassword,
+		cfg.SMTPFrom,
+	)
+	authService := auth.NewService(userRepository, jwtManager, emailSender, cfg.VerifyEmailBaseURL)
 	authHandler := auth.NewHandler(authService)
 
 	// Router
