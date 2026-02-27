@@ -1,8 +1,11 @@
 package action
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/security"
+	"github.com/gin-gonic/gin"
+)
 
-func RegisterRoutes(public, private *gin.RouterGroup, handler *Handler) {
+func RegisterRoutes(public, private *gin.RouterGroup, handler *Handler, requireAction func(string) gin.HandlerFunc) {
 	actions := private.Group("/actions")
-	actions.GET("/", handler.List)
+	actions.GET("/", requireAction(security.ActionActionsList), handler.List)
 }

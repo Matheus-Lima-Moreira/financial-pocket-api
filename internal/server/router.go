@@ -46,13 +46,14 @@ func NewRouter(dep Dependencies) *gin.Engine {
 	private := router.Group("")
 
 	jwtManager := auth.NewJWTManager(dep.Config.AccessTokenSecret, dep.Config.RefreshTokenSecret)
+	permissionMiddleware := auth.NewPermissionMiddleware(dep.DB)
 
 	// Middlewares
 	private.Use(auth.AuthMiddleware(jwtManager))
 
 	// Routes
 	handlers := setupHandlers(dep, jwtManager)
-	setupRoutes(public, private, handlers)
+	setupRoutes(public, private, handlers, permissionMiddleware.Require)
 
 	return router
 }
@@ -82,7 +83,7 @@ func setupHandlers(dep Dependencies, jwtManager *auth.JWTManager) *Handlers {
 	tokenService := token.NewService(tokenRepository)
 
 	authService := auth.NewService(userRepository, jwtManager, tokenService, emailSender, dep.Config.FrontendBaseURL)
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, auth.NewAuthRateLimiter())
 
 	organizationRepository := organizations.NewGormRepository(dep.DB)
 	organizationService := organizations.NewService(organizationRepository)
@@ -105,12 +106,17 @@ func setupHandlers(dep Dependencies, jwtManager *auth.JWTManager) *Handlers {
 	}
 }
 
-func setupRoutes(public, private *gin.RouterGroup, handlers *Handlers) {
+func setupRoutes(
+	public,
+	private *gin.RouterGroup,
+	handlers *Handlers,
+	requireAction func(string) gin.HandlerFunc,
+) {
 	auth.RegisterRoutes(public, private, handlers.AuthHandler)
-	user.RegisterRoutes(public, private, handlers.UserHandler)
-	organizations.RegisterRoutes(public, private, handlers.OrganizationHandler)
-	action.RegisterRoutes(public, private, handlers.ActionHandler)
-	group_permission.RegisterRoutes(public, private, handlers.GroupPermissionHandler)
+	user.RegisterRoutes(public, private, handlers.UserHandler, requireAction)
+	organizations.RegisterRoutes(public, private, handlers.OrganizationHandler, requireAction)
+	action.RegisterRoutes(public, private, handlers.ActionHandler, requireAction)
+	group_permission.RegisterRoutes(public, private, handlers.GroupPermissionHandler, requireAction)
 
 	public.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "OK"})

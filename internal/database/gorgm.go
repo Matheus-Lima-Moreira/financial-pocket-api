@@ -10,6 +10,7 @@ import (
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/authorization/group_permission"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/provisioning/token"
+	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/organizations"
 )
 
 func NewMySQL(dsn string) (*gorm.DB, error) {
@@ -40,7 +41,11 @@ func NewMySQL(dsn string) (*gorm.DB, error) {
 }
 
 func RunMigrations(db *gorm.DB) error {
-	if err := user.Migrate(db); err != nil {
+	if err := organizations.Migrate(db); err != nil {
+		return err
+	}
+
+	if err := action.Migrate(db); err != nil {
 		return err
 	}
 
@@ -48,7 +53,7 @@ func RunMigrations(db *gorm.DB) error {
 		return err
 	}
 
-	if err := action.Migrate(db); err != nil {
+	if err := user.Migrate(db); err != nil {
 		return err
 	}
 
@@ -60,7 +65,11 @@ func RunMigrations(db *gorm.DB) error {
 }
 
 func RunSeeds(db *gorm.DB) error {
-	if err := user.Seed(db); err != nil {
+	if err := organizations.Seed(db); err != nil {
+		return err
+	}
+
+	if err := action.Seed(db); err != nil {
 		return err
 	}
 
@@ -68,7 +77,7 @@ func RunSeeds(db *gorm.DB) error {
 		return err
 	}
 
-	if err := action.Seed(db); err != nil {
+	if err := user.Seed(db); err != nil {
 		return err
 	}
 

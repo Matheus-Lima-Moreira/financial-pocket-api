@@ -26,6 +26,7 @@ var ptBR = []*goi18n.Message{
 	{ID: "error.expired_token", Other: "Token expirado"},
 	{ID: "action.listed", Other: "Ações listadas com sucesso"},
 	{ID: "group_permission.listed", Other: "Permissões de grupo listadas com sucesso"},
+	{ID: "auth.reset_password_rate_limited", Other: "Limite de reset de senha atingido"},
 }
 
 func GetPTBRMessages() []*goi18n.Message {

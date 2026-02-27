@@ -2,17 +2,22 @@ package auth
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/dtos"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	service *Service
+	service     *Service
+	rateLimiter *AuthRateLimiter
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, rateLimiter *AuthRateLimiter) *Handler {
+	return &Handler{
+		service:     service,
+		rateLimiter: rateLimiter,
+	}
 }
 
 func (h *Handler) Register(c *gin.Context) {
@@ -20,6 +25,10 @@ func (h *Handler) Register(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.Error(err)
+		return
+	}
+
+	if !h.handleRateLimit(c, AuthRateLimitRegister, request.Email) {
 		return
 	}
 
@@ -44,6 +53,10 @@ func (h *Handler) Login(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.Error(err)
+		return
+	}
+
+	if !h.handleRateLimit(c, AuthRateLimitLogin, request.Email) {
 		return
 	}
 
@@ -106,6 +119,10 @@ func (h *Handler) ResendVerificationEmail(c *gin.Context) {
 		return
 	}
 
+	if !h.handleRateLimit(c, AuthRateLimitResendVerificationEmail, request.Email) {
+		return
+	}
+
 	if err := h.service.SendVerificationEmail(c.Request.Context(), request.Email); err != nil {
 		c.Error(err)
 		return
@@ -122,6 +139,10 @@ func (h *Handler) SendResetPasswordEmail(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.Error(err)
+		return
+	}
+
+	if !h.handleRateLimit(c, AuthRateLimitSendResetPassword, request.Email) {
 		return
 	}
 
@@ -153,4 +174,19 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 		Message: "auth.verify_email_success",
 		Data:    nil,
 	})
+}
+
+func (h *Handler) handleRateLimit(c *gin.Context, action AuthRateLimitAction, identity string) bool {
+	allowed, retryAfter := h.rateLimiter.Allow(action, identity, c.ClientIP(), time.Now())
+	if allowed {
+		return true
+	}
+
+	c.JSON(http.StatusTooManyRequests, dtos.ReplyDTO{
+		Message: "auth.rate_limited",
+		Data: gin.H{
+			"retry_after_seconds": int(retryAfter.Seconds()),
+		},
+	})
+	return false
 }

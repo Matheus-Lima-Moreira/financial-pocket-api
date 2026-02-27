@@ -1,9 +1,14 @@
 package organizations
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type OrganizationSchema struct {
-	ID        string    `gorm:"primaryKey;not null"`
+	ID        string    `gorm:"primaryKey;type:char(36)"`
 	Name      string    `gorm:"not null;size:255"`
 	Cellphone string    `gorm:"not null;size:255"`
 	Logo      string    `gorm:"not null;size:255"`
@@ -13,4 +18,9 @@ type OrganizationSchema struct {
 
 func (OrganizationSchema) TableName() string {
 	return "organizations"
+}
+
+func (o *OrganizationSchema) BeforeCreate(tx *gorm.DB) error {
+	o.ID = uuid.New().String()
+	return nil
 }
