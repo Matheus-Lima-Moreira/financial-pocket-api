@@ -31,6 +31,11 @@ func NewRouter(dep Dependencies) *gin.Engine {
 
 	router := gin.New()
 
+	allowedOrigins := []string{
+		dep.Config.FrontendBaseURL,
+		"http://localhost:3000",
+	}
+
 	if dep.Config.TrustedProxies() != nil {
 		router.SetTrustedProxies(dep.Config.TrustedProxies())
 	} else {
@@ -38,6 +43,7 @@ func NewRouter(dep Dependencies) *gin.Engine {
 	}
 
 	router.Use(gin.Recovery())
+	router.Use(middlewares.CORSMiddleware(allowedOrigins))
 	router.Use(middlewares.I18nMiddleware())
 	router.Use(middlewares.LoggerMiddleware(dep.Logger))
 	router.Use(middlewares.ErrorMiddleware())

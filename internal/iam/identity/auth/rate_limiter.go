@@ -43,9 +43,9 @@ func NewAuthRateLimiter() *AuthRateLimiter {
 				ResetAfter: 24 * time.Hour,
 			},
 			AuthRateLimitLogin: {
-				BaseDelay:  30 * time.Second,
-				MaxDelay:   10 * time.Minute,
-				ResetAfter: 12 * time.Hour,
+				BaseDelay:  500 * time.Millisecond,
+				MaxDelay:   30 * time.Second,
+				ResetAfter: 1 * time.Hour,
 			},
 			AuthRateLimitSendResetPassword: {
 				BaseDelay:  time.Minute,

@@ -120,7 +120,7 @@ func Load() *Config {
 
 func (c *Config) TrustedProxies() []string {
 	if c.Env == "development" {
-		return []string{"127.0.0.1", "::1"}
+		return []string{"127.0.0.1", "::1", "localhost", "http://localhost:3000"}
 	}
 
 	trustedProxies := os.Getenv("TRUSTED_PROXIES")

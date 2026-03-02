@@ -27,6 +27,8 @@ var en = []*goi18n.Message{
 	{ID: "action.listed", Other: "Actions listed successfully"},
 	{ID: "group_permission.listed", Other: "Group permissions listed successfully"},
 	{ID: "auth.reset_password_rate_limited", Other: "Reset password rate limited"},
+	{ID: "error.invalid_credentials", Other: "Invalid credentials"},
+	{ID: "auth.rate_limited", Other: "Rate limited"},
 }
 
 func GetENMessages() []*goi18n.Message {

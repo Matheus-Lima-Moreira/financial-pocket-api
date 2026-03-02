@@ -66,7 +66,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInputDTO) *shared_
 func (s *Service) Login(ctx context.Context, email, password string) (*TokenPairDTO, *shared_errors.AppError) {
 	user, err := s.userRepository.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, shared_errors.NewUnauthorized("error.invalid_credentials")
 	}
 
 	if !user.EmailVerified {
@@ -77,7 +77,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 		[]byte(user.Password),
 		[]byte(password),
 	); err != nil {
-		return nil, shared_errors.NewUnauthorized("invalid credentials")
+		return nil, shared_errors.NewUnauthorized("error.invalid_credentials")
 	}
 
 	accessToken, err := s.jwt.GenerateAccessToken(user.ID)

@@ -27,6 +27,8 @@ var ptBR = []*goi18n.Message{
 	{ID: "action.listed", Other: "Ações listadas com sucesso"},
 	{ID: "group_permission.listed", Other: "Permissões de grupo listadas com sucesso"},
 	{ID: "auth.reset_password_rate_limited", Other: "Limite de reset de senha atingido"},
+	{ID: "error.invalid_credentials", Other: "Credenciais inválidas"},
+	{ID: "auth.rate_limited", Other: "Limite de requisições atingido"},
 }
 
 func GetPTBRMessages() []*goi18n.Message {
