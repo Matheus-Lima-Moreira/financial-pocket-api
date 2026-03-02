@@ -55,3 +55,18 @@ func (h *Handler) Details(c *gin.Context) {
 		Message: "user.details",
 	})
 }
+
+func (h *Handler) Profile(c *gin.Context) {
+	userID := c.GetString("user_id")
+	user, err := h.service.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dtos.ReplyDTO{
+		Code:    dtos.SUCCESS,
+		Data:    user,
+		Message: "user.profile-details",
+	})
+}

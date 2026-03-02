@@ -120,3 +120,22 @@ func (r *GormRepository) Delete(ctx context.Context, id uint) *shared_errors.App
 
 	return nil
 }
+
+func (r *GormRepository) GetAllOfTypeSystem(ctx context.Context) ([]GroupPermissionEntity, *shared_errors.AppError) {
+	var models []GroupPermissionSchema
+
+	err := r.db.WithContext(ctx).
+		Where("type = ?", GroupPermissionSystem).
+		Find(&models).Error
+
+	if err != nil {
+		return nil, shared_errors.NewBadRequest(err.Error())
+	}
+
+	domains := make([]GroupPermissionEntity, len(models))
+	for i, model := range models {
+		domains[i] = *toDomain(&model)
+	}
+
+	return domains, nil
+}

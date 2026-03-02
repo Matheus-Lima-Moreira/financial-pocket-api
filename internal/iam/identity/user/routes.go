@@ -9,4 +9,5 @@ func RegisterRoutes(public, private *gin.RouterGroup, handler *Handler, requireA
 	users := private.Group("/users")
 	users.GET("/", requireAction(security.ActionUsersList), handler.List)
 	users.GET("/:id", requireAction(security.ActionUsersDetails), handler.Details)
+	users.GET("/profile", handler.Profile)
 }

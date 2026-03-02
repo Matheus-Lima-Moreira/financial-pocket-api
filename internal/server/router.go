@@ -85,12 +85,6 @@ func setupHandlers(dep Dependencies, jwtManager *auth.JWTManager) *Handlers {
 	userService := user.NewService(userRepository)
 	userHandler := user.NewHandler(userService)
 
-	tokenRepository := token.NewGormRepository(dep.DB)
-	tokenService := token.NewService(tokenRepository)
-
-	authService := auth.NewService(userRepository, jwtManager, tokenService, emailSender, dep.Config.FrontendBaseURL)
-	authHandler := auth.NewHandler(authService, auth.NewAuthRateLimiter())
-
 	organizationRepository := organizations.NewGormRepository(dep.DB)
 	organizationService := organizations.NewService(organizationRepository)
 	organizationHandler := organizations.NewHandler(organizationService)
@@ -102,6 +96,12 @@ func setupHandlers(dep Dependencies, jwtManager *auth.JWTManager) *Handlers {
 	groupPermissionRepository := group_permission.NewGormRepository(dep.DB)
 	groupPermissionService := group_permission.NewService(groupPermissionRepository)
 	groupPermissionHandler := group_permission.NewHandler(groupPermissionService)
+
+	tokenRepository := token.NewGormRepository(dep.DB)
+	tokenService := token.NewService(tokenRepository)
+
+	authService := auth.NewService(userRepository, organizationRepository, groupPermissionRepository, jwtManager, tokenService, emailSender, dep.Config.FrontendBaseURL)
+	authHandler := auth.NewHandler(authService, auth.NewAuthRateLimiter())
 
 	return &Handlers{
 		AuthHandler:            authHandler,

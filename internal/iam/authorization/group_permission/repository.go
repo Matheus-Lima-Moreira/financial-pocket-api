@@ -13,4 +13,5 @@ type Repository interface {
 	Create(ctx context.Context, groupPermission *GroupPermissionEntity) *shared_errors.AppError
 	Update(ctx context.Context, groupPermission *GroupPermissionEntity) *shared_errors.AppError
 	Delete(ctx context.Context, id uint) *shared_errors.AppError
+	GetAllOfTypeSystem(ctx context.Context) ([]GroupPermissionEntity, *shared_errors.AppError)
 }

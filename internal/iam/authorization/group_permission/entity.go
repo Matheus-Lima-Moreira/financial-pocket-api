@@ -2,13 +2,6 @@ package group_permission
 
 import "time"
 
-type GroupPermissionType string
-
-const (
-	GroupPermissionSystem GroupPermissionType = "SYSTEM"
-	GroupPermissionCustom GroupPermissionType = "CUSTOM"
-)
-
 type GroupPermissionEntity struct {
 	ID        string              `json:"id"`
 	Name      string              `json:"name"`

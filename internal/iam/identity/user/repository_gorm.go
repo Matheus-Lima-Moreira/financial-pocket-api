@@ -67,7 +67,7 @@ func (r *GormRepository) FindByEmail(ctx context.Context, email string) (*UserEn
 	return toDomain(&model), nil
 }
 
-func (r *GormRepository) SetEmailVerified(ctx context.Context, id uint, value bool) *shared_errors.AppError {
+func (r *GormRepository) SetEmailVerified(ctx context.Context, id string, value bool) *shared_errors.AppError {
 	result := r.db.WithContext(ctx).
 		Model(&UserSchema{}).
 		Where("id = ?", id).
@@ -133,7 +133,7 @@ func (r *GormRepository) List(ctx context.Context, page int) ([]UserEntity, *dto
 	return domains, pagination, nil
 }
 
-func (r *GormRepository) GetById(ctx context.Context, id uint) (*UserEntity, *shared_errors.AppError) {
+func (r *GormRepository) GetById(ctx context.Context, id string) (*UserEntity, *shared_errors.AppError) {
 	var model UserSchema
 
 	err := r.db.WithContext(ctx).
@@ -150,11 +150,44 @@ func (r *GormRepository) GetById(ctx context.Context, id uint) (*UserEntity, *sh
 	return toDomain(&model), nil
 }
 
-func (r *GormRepository) UpdatePassword(ctx context.Context, id uint, password string) *shared_errors.AppError {
+func (r *GormRepository) UpdatePassword(ctx context.Context, id string, password string) *shared_errors.AppError {
 	err := r.db.WithContext(ctx).
 		Model(&UserSchema{}).
 		Where("id = ?", id).
 		Update("password", password).Error
+
+	if err != nil {
+		return shared_errors.NewBadRequest(err.Error())
+	}
+
+	return nil
+}
+
+func (r *GormRepository) GetProfile(ctx context.Context, id string) (*UserEntity, *shared_errors.AppError) {
+	var model UserSchema
+
+	err := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&model).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, shared_errors.NewNotFound("user")
+		}
+		return nil, shared_errors.NewBadRequest(err.Error())
+	}
+
+	return toDomain(&model), nil
+}
+
+func (r *GormRepository) AddGroupPermission(ctx context.Context, userID string, groupPermissionID string) *shared_errors.AppError {
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Where("group_permission_id = ?", groupPermissionID).
+		FirstOrCreate(&UserGroupPermissionSchema{
+			UserID:            userID,
+			GroupPermissionID: groupPermissionID,
+		}).Error
 
 	if err != nil {
 		return shared_errors.NewBadRequest(err.Error())

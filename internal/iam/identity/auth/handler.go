@@ -28,14 +28,20 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if !h.handleRateLimit(c, AuthRateLimitRegister, request.Email) {
+	if !h.handleRateLimit(c, AuthRateLimitRegister, request.User.Email) {
 		return
 	}
 
 	if err := h.service.Register(c.Request.Context(), RegisterInputDTO{
-		Name:     request.Name,
-		Email:    request.Email,
-		Password: request.Password,
+		User: RegisterUserRequestDTO{
+			Name:     request.User.Name,
+			Email:    request.User.Email,
+			Password: request.User.Password,
+		},
+		Organization: RegisterOrganizationRequestDTO{
+			Cellphone: request.Organization.Cellphone,
+			Name:      request.Organization.Name,
+		},
 	},
 	); err != nil {
 		c.Error(err)

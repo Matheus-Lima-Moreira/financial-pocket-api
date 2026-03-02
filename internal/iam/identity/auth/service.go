@@ -3,57 +3,87 @@ package auth
 import (
 	"context"
 	"net/url"
-	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 
+	group_permission "github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/authorization/group_permission"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/identity/user"
 	"github.com/Matheus-Lima-Moreira/financial-pocket/internal/iam/provisioning/token"
 	emails "github.com/Matheus-Lima-Moreira/financial-pocket/internal/notifications/emails"
+	organization "github.com/Matheus-Lima-Moreira/financial-pocket/internal/organizations"
 	shared_errors "github.com/Matheus-Lima-Moreira/financial-pocket/internal/shared/errors"
 )
 
 type Service struct {
-	userRepository  user.Repository
-	jwt             *JWTManager
-	tokenService    *token.Service
-	emailSender     emails.EmailSender
-	frontendBaseURL string
+	userRepository            user.Repository
+	organizationRepository    organization.Repository
+	groupPermissionRepository group_permission.Repository
+	jwt                       *JWTManager
+	tokenService              *token.Service
+	emailSender               emails.EmailSender
+	frontendBaseURL           string
 }
 
-func NewService(userRepository user.Repository, jwt *JWTManager, tokenService *token.Service, emailSender emails.EmailSender, frontendBaseURL string) *Service {
+func NewService(userRepository user.Repository, organizationRepository organization.Repository, groupPermissionRepository group_permission.Repository, jwt *JWTManager, tokenService *token.Service, emailSender emails.EmailSender, frontendBaseURL string) *Service {
 	return &Service{
-		userRepository:  userRepository,
-		jwt:             jwt,
-		tokenService:    tokenService,
-		emailSender:     emailSender,
-		frontendBaseURL: frontendBaseURL,
+		userRepository:            userRepository,
+		organizationRepository:    organizationRepository,
+		groupPermissionRepository: groupPermissionRepository,
+		jwt:                       jwt,
+		tokenService:              tokenService,
+		emailSender:               emailSender,
+		frontendBaseURL:           frontendBaseURL,
 	}
 }
 
 func (s *Service) Register(ctx context.Context, input RegisterInputDTO) *shared_errors.AppError {
-	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	organization := &organization.OrganizationEntity{
+		Cellphone: input.Organization.Cellphone,
+		Name:      input.Organization.Name,
+	}
+
+	if err := s.organizationRepository.Create(ctx, organization); err != nil {
+		return err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.User.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return shared_errors.NewBadRequest(err.Error())
 	}
 
 	user := &user.UserEntity{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: string(hash),
+		Name:           input.User.Name,
+		Email:          input.User.Email,
+		Password:       string(hash),
+		OrganizationID: organization.ID,
+		RegisterFrom:   user.RegisterFromForm,
+		IsPrimary:      true,
 	}
 
-	existingUser, repositoryErr := s.userRepository.FindByEmail(ctx, input.Email)
+	existingUser, repositoryErr := s.userRepository.FindByEmail(ctx, input.User.Email)
 	if repositoryErr != nil && repositoryErr.ErrorCode != shared_errors.CodeNotFound {
 		return repositoryErr
 	}
 
 	if existingUser != nil {
-		return shared_errors.NewConflict("error.email_already_in_use", "email")
+		return nil
 	}
 
 	if err := s.userRepository.Create(ctx, user); err != nil {
 		return err
+	}
+
+	if user.IsPrimary {
+		groupPermissions, err := s.groupPermissionRepository.GetAllOfTypeSystem(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, groupPermission := range groupPermissions {
+			if err := s.userRepository.AddGroupPermission(ctx, user.ID, groupPermission.ID); err != nil {
+				return err
+			}
+		}
 	}
 
 	if err := s.SendVerificationEmail(ctx, user.Email); err != nil {
@@ -134,17 +164,12 @@ func (s *Service) ResetPassword(ctx context.Context, resetPasswordToken string, 
 		return err
 	}
 
-	parsedID, parseErr := strconv.Atoi(tokenEntity.ReferenceID)
-	if parseErr != nil {
-		return shared_errors.NewUnauthorized("error.invalid_token")
-	}
-
 	hash, errHash := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if errHash != nil {
 		return shared_errors.NewBadRequest(errHash.Error())
 	}
 
-	if err := s.userRepository.UpdatePassword(ctx, uint(parsedID), string(hash)); err != nil {
+	if err := s.userRepository.UpdatePassword(ctx, tokenEntity.ReferenceID, string(hash)); err != nil {
 		return err
 	}
 
@@ -220,12 +245,7 @@ func (s *Service) VerifyEmail(ctx context.Context, verifyToken string) *shared_e
 		return err
 	}
 
-	parsedID, parseErr := strconv.Atoi(tokenEntity.ReferenceID)
-	if parseErr != nil {
-		return shared_errors.NewUnauthorized("error.invalid_token")
-	}
-
-	if err := s.userRepository.SetEmailVerified(ctx, uint(parsedID), true); err != nil {
+	if err := s.userRepository.SetEmailVerified(ctx, tokenEntity.ReferenceID, true); err != nil {
 		return err
 	}
 

@@ -5,5 +5,5 @@ type ListRequest struct {
 }
 
 type DetailsRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
+	ID string `uri:"id" binding:"required,min=1"`
 }
