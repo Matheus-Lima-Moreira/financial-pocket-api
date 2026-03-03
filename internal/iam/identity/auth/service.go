@@ -37,27 +37,17 @@ func NewService(userRepository user.Repository, organizationRepository organizat
 }
 
 func (s *Service) Register(ctx context.Context, input RegisterInputDTO) *shared_errors.AppError {
-	organization := &organization.OrganizationEntity{
-		Cellphone: input.Organization.Cellphone,
-		Name:      input.Organization.Name,
-	}
-
-	if err := s.organizationRepository.Create(ctx, organization); err != nil {
-		return err
-	}
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.User.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return shared_errors.NewBadRequest(err.Error())
 	}
 
 	user := &user.UserEntity{
-		Name:           input.User.Name,
-		Email:          input.User.Email,
-		Password:       string(hash),
-		OrganizationID: organization.ID,
-		RegisterFrom:   user.RegisterFromForm,
-		IsPrimary:      true,
+		Name:         input.User.Name,
+		Email:        input.User.Email,
+		Password:     string(hash),
+		RegisterFrom: user.RegisterFromForm,
+		IsPrimary:    true,
 	}
 
 	existingUser, repositoryErr := s.userRepository.FindByEmail(ctx, input.User.Email)
@@ -68,6 +58,17 @@ func (s *Service) Register(ctx context.Context, input RegisterInputDTO) *shared_
 	if existingUser != nil {
 		return nil
 	}
+
+	organization := &organization.OrganizationEntity{
+		Cellphone: input.Organization.Cellphone,
+		Name:      input.Organization.Name,
+	}
+
+	if err := s.organizationRepository.Create(ctx, organization); err != nil {
+		return err
+	}
+
+	user.OrganizationID = organization.ID
 
 	if err := s.userRepository.Create(ctx, user); err != nil {
 		return err
@@ -97,10 +98,6 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 	user, err := s.userRepository.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, shared_errors.NewUnauthorized("error.invalid_credentials")
-	}
-
-	if !user.EmailVerified {
-		return nil, shared_errors.NewUnauthorized("auth.email_not_verified")
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
