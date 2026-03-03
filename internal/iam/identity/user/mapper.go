@@ -11,6 +11,7 @@ func toModel(user *UserEntity) *UserSchema {
 		RegisterFrom:   user.RegisterFrom,
 		OrganizationID: user.OrganizationID,
 		IsPrimary:      user.IsPrimary,
+		Active:         user.Active,
 		CreatedAt:      user.CreatedAt,
 		UpdatedAt:      user.UpdatedAt,
 	}
@@ -27,6 +28,7 @@ func toDomain(model *UserSchema) *UserEntity {
 		RegisterFrom:   model.RegisterFrom,
 		OrganizationID: model.OrganizationID,
 		IsPrimary:      model.IsPrimary,
+		Active:         model.Active,
 		CreatedAt:      model.CreatedAt,
 		UpdatedAt:      model.UpdatedAt,
 	}

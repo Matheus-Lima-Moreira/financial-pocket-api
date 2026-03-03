@@ -22,7 +22,9 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	users, pagination, err := h.service.List(c.Request.Context(), request.Page)
+	organizationID := c.GetString("organization_id")
+
+	users, pagination, err := h.service.List(c.Request.Context(), request.Page, organizationID)
 	if err != nil {
 		c.Error(err)
 		return

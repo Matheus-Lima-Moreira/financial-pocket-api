@@ -107,12 +107,12 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 		return nil, shared_errors.NewUnauthorized("error.invalid_credentials")
 	}
 
-	accessToken, err := s.jwt.GenerateAccessToken(user.ID)
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.jwt.GenerateRefreshToken(user.ID)
+	refreshToken, err := s.jwt.GenerateRefreshToken(user.ID, user.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -124,17 +124,20 @@ func (s *Service) Login(ctx context.Context, email, password string) (*TokenPair
 }
 
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*TokenPairDTO, *shared_errors.AppError) {
-	userID, err := s.jwt.ValidateRefreshToken(refreshToken)
+	claims, err := s.jwt.ValidateRefreshToken(refreshToken)
 	if err != nil {
 		return nil, err
 	}
 
-	accessToken, err := s.jwt.GenerateAccessToken(userID)
+	userID := claims.UserID
+	organizationID := claims.OrganizationID
+
+	accessToken, err := s.jwt.GenerateAccessToken(userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 
-	newRefreshToken, err := s.jwt.GenerateRefreshToken(userID)
+	newRefreshToken, err := s.jwt.GenerateRefreshToken(userID, organizationID)
 	if err != nil {
 		return nil, err
 	}

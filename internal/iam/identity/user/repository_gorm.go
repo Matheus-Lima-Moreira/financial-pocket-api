@@ -84,14 +84,15 @@ func (r *GormRepository) SetEmailVerified(ctx context.Context, id string, value 
 	return nil
 }
 
-func (r *GormRepository) List(ctx context.Context, page int) ([]UserEntity, *dtos.PaginationDTO, *shared_errors.AppError) {
+func (r *GormRepository) List(ctx context.Context, page int, organizationID string) ([]UserEntity, *dtos.PaginationDTO, *shared_errors.AppError) {
 	var models []UserSchema
 
 	limit := consts.PaginationDefaultLimit
 
 	err := r.db.WithContext(ctx).
-		Offset((page - 1) * limit).
+		Offset((page-1)*limit).
 		Limit(limit).
+		Where("organization_id = ?", organizationID).
 		Find(&models).Error
 
 	if err != nil {
@@ -107,6 +108,7 @@ func (r *GormRepository) List(ctx context.Context, page int) ([]UserEntity, *dto
 
 	err = r.db.WithContext(ctx).
 		Model(&UserSchema{}).
+		Where("organization_id = ?", organizationID).
 		Count(&total).Error
 
 	if err != nil {

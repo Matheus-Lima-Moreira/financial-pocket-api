@@ -17,12 +17,40 @@ func NewService(userRepository Repository) *Service {
 	}
 }
 
-func (s *Service) List(ctx context.Context, page int) ([]UserEntity, *dtos.PaginationDTO, *shared_errors.AppError) {
-	users, pagination, err := s.userRepository.List(ctx, page)
+func (s *Service) List(ctx context.Context, page int, organizationID string) ([]UserReplyDto, *dtos.PaginationDTO, *shared_errors.AppError) {
+	users, pagination, err := s.userRepository.List(ctx, page, organizationID)
 	if err != nil {
 		return nil, nil, shared_errors.NewBadRequest(err.Error())
 	}
-	return users, pagination, nil
+
+	usersDTO := make([]UserReplyDto, len(users))
+	for i, user := range users {
+		usersDTO[i] = UserReplyDto{
+			ID:             user.ID,
+			Name:           user.Name,
+			Email:          user.Email,
+			IsPrimary:      user.IsPrimary,
+			Active:         user.Active,
+			OrganizationID: user.OrganizationID,
+			AvatarUrl:      user.Avatar,
+			RegisterFrom:   user.RegisterFrom,
+			EmailVerified:  user.EmailVerified,
+			State:          DetermineUserState(&user),
+			CreatedAt:      user.CreatedAt,
+			UpdatedAt:      user.UpdatedAt,
+		}
+	}
+	return usersDTO, pagination, nil
+}
+
+func DetermineUserState(user *UserEntity) UserState {
+	if !user.Active {
+		return UserStateInactive
+	}
+	if user.RegisterFrom == RegisterFromInvite && !user.EmailVerified {
+		return UserStateInvitePending
+	}
+	return UserStateActive
 }
 
 func (s *Service) Details(ctx context.Context, id string) (*UserEntity, *shared_errors.AppError) {

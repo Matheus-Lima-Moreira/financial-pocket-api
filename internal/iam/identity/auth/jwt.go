@@ -24,15 +24,9 @@ func NewJWTManager(accessTokenSecret, refreshTokenSecret string) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateAccessToken(userID string) (string, *shared_errors.AppError) {
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"type":    "access",
-		"exp":     time.Now().Add(j.accessTokenDuration).Unix(),
-		"iat":     time.Now().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+func (j *JWTManager) GenerateAccessToken(userID, organizationID string) (string, *shared_errors.AppError) {
+	claims := NewJWTManagerClaims(userID, organizationID, "access", j.accessTokenDuration)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims.ToJwtMapClaims())
 	accessToken, err := token.SignedString([]byte(j.accessTokenSecret))
 	if err != nil {
 		return "", shared_errors.NewBadRequest(err.Error())
@@ -40,15 +34,9 @@ func (j *JWTManager) GenerateAccessToken(userID string) (string, *shared_errors.
 	return accessToken, nil
 }
 
-func (j *JWTManager) GenerateRefreshToken(userID string) (string, *shared_errors.AppError) {
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"type":    "refresh",
-		"exp":     time.Now().Add(j.refreshTokenDuration).Unix(),
-		"iat":     time.Now().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+func (j *JWTManager) GenerateRefreshToken(userID, organizationID string) (string, *shared_errors.AppError) {
+	claims := NewJWTManagerClaims(userID, organizationID, "refresh", j.refreshTokenDuration)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims.ToJwtMapClaims())
 	refreshToken, err := token.SignedString([]byte(j.refreshTokenSecret))
 	if err != nil {
 		return "", shared_errors.NewBadRequest(err.Error())
@@ -60,23 +48,21 @@ func (j *JWTManager) ValidateToken(tokenString string) (jwt.MapClaims, *shared_e
 	return j.parseToken(tokenString, j.accessTokenSecret)
 }
 
-func (j *JWTManager) ValidateRefreshToken(tokenString string) (string, *shared_errors.AppError) {
+func (j *JWTManager) ValidateRefreshToken(tokenString string) (*JWTManagerClaims, *shared_errors.AppError) {
 	claims, err := j.parseToken(tokenString, j.refreshTokenSecret)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	tokenType, ok := claims["type"].(string)
-	if !ok || tokenType != "refresh" {
-		return "", shared_errors.NewUnauthorized("error.invalid_token")
+	claimsObj, err := ParseJWTManagerClaims(claims)
+	if err != nil {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+	if claimsObj.TokenType != "refresh" {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
 	}
 
-	userID, ok := claims["user_id"].(string)
-	if !ok {
-		return "", shared_errors.NewUnauthorized("error.invalid_token")
-	}
-
-	return userID, nil
+	return claimsObj, nil
 }
 
 func (j *JWTManager) parseToken(tokenString string, secret string) (jwt.MapClaims, *shared_errors.AppError) {
@@ -104,4 +90,63 @@ func (j *JWTManager) parseToken(tokenString string, secret string) (jwt.MapClaim
 	}
 
 	return claims, nil
+}
+
+type JWTManagerClaims struct {
+	UserID         string `json:"user_id"`
+	OrganizationID string `json:"organization_id"`
+	TokenType      string `json:"type"`
+	Exp            int64  `json:"exp"`
+	Iat            int64  `json:"iat"`
+}
+
+func NewJWTManagerClaims(userID, organizationID, tokenType string, accessTokenDuration time.Duration) JWTManagerClaims {
+	return JWTManagerClaims{
+		UserID:         userID,
+		OrganizationID: organizationID,
+		TokenType:      tokenType,
+		Exp:            time.Now().Add(accessTokenDuration).Unix(),
+		Iat:            time.Now().Unix(),
+	}
+}
+
+func (c *JWTManagerClaims) ToJwtMapClaims() jwt.MapClaims {
+	return jwt.MapClaims{
+		"user_id":         c.UserID,
+		"organization_id": c.OrganizationID,
+		"type":            c.TokenType,
+		"exp":             c.Exp,
+		"iat":             c.Iat,
+	}
+}
+
+func ParseJWTManagerClaims(claims jwt.MapClaims) (*JWTManagerClaims, *shared_errors.AppError) {
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+	organizationID, ok := claims["organization_id"].(string)
+	if !ok {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+	tokenType, ok := claims["type"].(string)
+	if !ok {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+	exp, ok := claims["exp"].(int64)
+	if !ok {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+	iat, ok := claims["iat"].(int64)
+	if !ok {
+		return nil, shared_errors.NewUnauthorized("error.invalid_token")
+	}
+
+	return &JWTManagerClaims{
+		UserID:         userID,
+		OrganizationID: organizationID,
+		TokenType:      tokenType,
+		Exp:            exp,
+		Iat:            iat,
+	}, nil
 }
